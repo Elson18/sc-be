@@ -18,6 +18,7 @@ from routes.classes import classes_bp
 from routes.subjects import subjects_bp
 from routes.exams import exams_bp
 
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -41,7 +42,9 @@ def create_app(config_class=Config):
     app.register_blueprint(classes_bp)
     app.register_blueprint(subjects_bp)
     app.register_blueprint(exams_bp)
-
+    @app.route("/")
+    def home():
+        return "Hello, World!"
     # Error handling
     @app.errorhandler(404)
     def not_found_error(error):
