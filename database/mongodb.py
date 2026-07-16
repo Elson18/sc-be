@@ -96,5 +96,28 @@ class Database:
         self.db.discussion_messages.create_index("discussionId")
         self.db.discussion_messages.create_index("createdAt")
 
+        # Fee structures indexes
+        self.db.fee_structures.create_index("feeStructureId", unique=True)
+        self.db.fee_structures.create_index("status")
+        self.db.fee_structures.create_index("dueDate")
+        self.db.fee_structures.create_index("classIds")
+
+        # Student fees indexes
+        self.db.student_fees.create_index("studentId")
+        self.db.student_fees.create_index("classId")
+        self.db.student_fees.create_index("feeStructureId")
+        self.db.student_fees.create_index("status")
+        self.db.student_fees.create_index([("studentId", 1), ("feeStructureId", 1)], unique=True)
+
+        # Fee payments indexes
+        self.db.fee_payments.create_index("paymentId", unique=True)
+        self.db.fee_payments.create_index("studentId")
+        self.db.fee_payments.create_index("feeStructureId")
+        self.db.fee_payments.create_index("transactionId", unique=True, sparse=True)
+
+        # Fee notifications indexes
+        self.db.fee_notifications.create_index("studentId")
+
+
 # Global database wrapper instance
 db_wrapper = Database()

@@ -18,6 +18,7 @@ from routes.classes import classes_bp
 from routes.subjects import subjects_bp
 from routes.exams import exams_bp
 from routes.discussions import discussions_bp
+from routes.fees import fees_bp
 
 
 def create_app(config_class=Config):
@@ -44,7 +45,9 @@ def create_app(config_class=Config):
     app.register_blueprint(subjects_bp)
     app.register_blueprint(exams_bp)
     app.register_blueprint(discussions_bp)
+    app.register_blueprint(fees_bp)
     @app.route("/")
+
     def home():
         return "Hello, World!"
     # Error handling
