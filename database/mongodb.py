@@ -85,5 +85,16 @@ class Database:
             ("examId", 1)
         ], unique=True, partialFilterExpression={"examId": {"$exists": True}})
 
+        # Discussions indexes
+        self.db.discussions.create_index("studentId")
+        self.db.discussions.create_index("teacherId")
+        self.db.discussions.create_index("discussionId", unique=True)
+        self.db.discussions.create_index("status")
+        self.db.discussions.create_index("createdAt")
+
+        # Discussion messages indexes
+        self.db.discussion_messages.create_index("discussionId")
+        self.db.discussion_messages.create_index("createdAt")
+
 # Global database wrapper instance
 db_wrapper = Database()
