@@ -118,6 +118,20 @@ class Database:
         # Fee notifications indexes
         self.db.fee_notifications.create_index("studentId")
 
+        # Online Exam Questions indexes
+        self.db.exam_questions.create_index("examId")
+        self.db.exam_questions.create_index([("examId", 1), ("questionId", 1)], unique=True)
+
+        # Online Exam Attempts indexes
+        self.db.exam_attempts.create_index("attemptId", unique=True)
+        self.db.exam_attempts.create_index([("examId", 1), ("studentId", 1)], unique=True)
+
+        # Student Answers indexes
+        self.db.student_answers.create_index([("attemptId", 1), ("questionId", 1)], unique=True)
+
+        # Exam Results indexes
+        self.db.exam_results.create_index([("examId", 1), ("studentId", 1)], unique=True)
+
 
 # Global database wrapper instance
 db_wrapper = Database()

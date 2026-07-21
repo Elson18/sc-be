@@ -1047,3 +1047,1291 @@ Whenever a request fails (e.g. invalid credentials, validation error, permission
   }
 }
 ```
+
+---
+
+## 7. Discussion & Support Module Endpoints
+
+### 7.1 Student: Create Discussion
+* **URL**: `/api/discussions`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "title": "Need help in Mathematics",
+  "category": "ACADEMIC",
+  "priority": "MEDIUM",
+  "message": "I have a doubt regarding Algebra Chapter 4."
+}
+```
+* **Success Response (201 Created)**:
+```json
+{
+  "success": true,
+  "message": "Discussion created successfully.",
+  "data": {}
+}
+```
+
+---
+
+### 7.2 Student: Get My Discussions
+* **URL**: `/api/student/discussions`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Query Parameters** (Optional):
+  * `status`: Filter by status (e.g. `OPEN`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`)
+  * `priority`: Filter by priority (e.g. `LOW`, `MEDIUM`, `HIGH`)
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "_id": "6a587bc8efca6c33cc1b7280",
+      "discussionId": "DISC001",
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "classId": "6a4759faf045ac1652f4b2c8",
+      "teacherId": "teacher1",
+      "title": "Need help in Mathematics",
+      "category": "ACADEMIC",
+      "priority": "MEDIUM",
+      "status": "OPEN",
+      "createdAt": "2026-07-16T12:05:54.120000",
+      "updatedAt": "2026-07-16T12:05:54.120000",
+      "lastMessageAt": "2026-07-16T12:05:54.120000",
+      "lastMessageBy": "student"
+    }
+  ]
+}
+```
+
+---
+
+### 7.3 Student: Get Discussion Details
+* **URL**: `/api/discussions/<discussionId>`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": {
+    "discussion": {
+      "_id": "6a587bc8efca6c33cc1b7280",
+      "discussionId": "DISC001",
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "classId": "6a4759faf045ac1652f4b2c8",
+      "teacherId": "teacher1",
+      "title": "Need help in Mathematics",
+      "category": "ACADEMIC",
+      "priority": "MEDIUM",
+      "status": "OPEN",
+      "createdAt": "2026-07-16T12:05:54.120000",
+      "updatedAt": "2026-07-16T12:05:54.120000",
+      "lastMessageAt": "2026-07-16T12:05:54.120000",
+      "lastMessageBy": "student"
+    },
+    "messages": [
+      {
+        "_id": "6a587bc8efca6c33cc1b7281",
+        "discussionId": "DISC001",
+        "senderId": "student1",
+        "senderRole": "STUDENT",
+        "message": "I have a doubt regarding Algebra Chapter 4.",
+        "attachments": [],
+        "createdAt": "2026-07-16T12:05:54.120000",
+        "isEdited": false,
+        "editedAt": null
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 7.4 Student: Send Reply
+* **URL**: `/api/discussions/<discussionId>/reply`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "message": "Thank you sir."
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Reply sent successfully.",
+  "data": {}
+}
+```
+
+---
+
+### 7.5 Student: Delete Discussion
+* **URL**: `/api/discussions/<discussionId>`
+* **Method**: `DELETE`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Discussion deleted successfully.",
+  "data": {}
+}
+```
+> [!IMPORTANT]
+> Deletion is only allowed if the discussion status is `OPEN` and it has no teacher or admin replies.
+
+---
+
+### 7.6 Teacher: Get Assigned Discussions
+* **URL**: `/api/teacher/discussions`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Query Parameters** (Optional):
+  * `classId`: Filter by class grade/section ID
+  * `status`: Filter by status
+  * `category`: Filter by category
+  * `priority`: Filter by priority
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "_id": "6a587bc8efca6c33cc1b7280",
+      "discussionId": "DISC001",
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "classId": "6a4759faf045ac1652f4b2c8",
+      "teacherId": "teacher1",
+      "title": "Need help in Mathematics",
+      "category": "ACADEMIC",
+      "priority": "MEDIUM",
+      "status": "OPEN",
+      "createdAt": "2026-07-16T12:05:54.120000",
+      "updatedAt": "2026-07-16T12:05:54.120000",
+      "lastMessageAt": "2026-07-16T12:05:54.120000",
+      "lastMessageBy": "student"
+    }
+  ]
+}
+```
+
+---
+
+### 7.7 Teacher: Get Discussion Details
+* **URL**: `/api/teacher/discussions/<discussionId>`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": {
+    "discussion": {
+      "_id": "6a587bc8efca6c33cc1b7280",
+      "discussionId": "DISC001",
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "classId": "6a4759faf045ac1652f4b2c8",
+      "teacherId": "teacher1",
+      "title": "Need help in Mathematics",
+      "category": "ACADEMIC",
+      "priority": "MEDIUM",
+      "status": "OPEN",
+      "createdAt": "2026-07-16T12:05:54.120000"
+    },
+    "messages": [
+      {
+        "_id": "6a587bc8efca6c33cc1b7281",
+        "discussionId": "DISC001",
+        "senderId": "student1",
+        "senderRole": "STUDENT",
+        "message": "I have a doubt regarding Algebra Chapter 4.",
+        "createdAt": "2026-07-16T12:05:54.120000"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 7.8 Teacher: Reply to Discussion
+* **URL**: `/api/teacher/discussions/<discussionId>/reply`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "message": "Please refer to page 35 in your Mathematics textbook."
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Reply sent successfully.",
+  "data": {}
+}
+```
+
+---
+
+### 7.9 Teacher: Change Status
+* **URL**: `/api/teacher/discussions/<discussionId>/status`
+* **Method**: `PUT`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "status": "RESOLVED"
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Status updated successfully.",
+  "data": {}
+}
+```
+> [!WARNING]
+> Teachers can update discussion status to `OPEN`, `IN_PROGRESS`, or `RESOLVED`. Setting the status to `CLOSED` is restricted to Super Admins.
+
+---
+
+### 7.10 Super Admin: Get All Discussions
+* **URL**: `/api/admin/discussions`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Query Parameters** (Optional):
+  * `School`, `Class`, `Teacher`, `Student`, `Status`, `Category`, `Priority`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "_id": "6a587bc8efca6c33cc1b7280",
+      "discussionId": "DISC001",
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "classId": "6a4759faf045ac1652f4b2c8",
+      "teacherId": "teacher1",
+      "title": "Need help in Mathematics",
+      "category": "ACADEMIC",
+      "priority": "MEDIUM",
+      "status": "RESOLVED",
+      "createdAt": "2026-07-16T12:05:54.120000"
+    }
+  ]
+}
+```
+
+---
+
+### 7.11 Super Admin: View Discussion
+* **URL**: `/api/admin/discussions/<discussionId>`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": {
+    "discussion": {
+      "discussionId": "DISC001",
+      "studentId": "student1",
+      "title": "Need help in Mathematics",
+      "status": "RESOLVED"
+    },
+    "messages": [
+      {
+        "senderId": "student1",
+        "message": "I have a doubt regarding Algebra Chapter 4."
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 7.12 Super Admin: Reply to Discussion
+* **URL**: `/api/admin/discussions/<discussionId>/reply`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "message": "Administrator reply content."
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Reply sent successfully.",
+  "data": {}
+}
+```
+
+---
+
+### 7.13 Super Admin: Close Discussion
+* **URL**: `/api/admin/discussions/<discussionId>/status`
+* **Method**: `PUT`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "status": "CLOSED"
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Status updated successfully.",
+  "data": {}
+}
+```
+
+---
+
+### 7.14 Super Admin: Delete Discussion
+* **URL**: `/api/admin/discussions/<discussionId>`
+* **Method**: `DELETE`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Discussion deleted successfully.",
+  "data": {}
+}
+```
+
+---
+
+### 7.15 Common: Discussion Statistics
+* **URL**: `/api/discussions/statistics`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Discussion statistics retrieved successfully.",
+  "data": {
+    "totalDiscussions": 120,
+    "open": 18,
+    "inProgress": 20,
+    "resolved": 72,
+    "closed": 10,
+    "highPriority": 6
+  }
+}
+```
+
+---
+
+## 8. Fees Management Endpoints
+
+### 8.1 Super Admin: Create Fee Structure
+* **URL**: `/api/admin/fees`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "title": "Term 1 Fees",
+  "academicYear": "2026-2027",
+  "classIds": ["CLASS10A"],
+  "feeItems": [
+    {
+      "name": "Tuition Fee",
+      "amount": 20000
+    },
+    {
+      "name": "Transport Fee",
+      "amount": 3000
+    }
+  ],
+  "dueDate": "2026-09-15"
+}
+```
+* **Success Response (201 Created)**:
+```json
+{
+  "success": true,
+  "message": "Fee structure created and assigned successfully.",
+  "data": {
+    "_id": "6a58ce48273723da28fd8895",
+    "feeStructureId": "FEE001",
+    "title": "Term 1 Fees",
+    "academicYear": "2026-2027",
+    "classIds": ["CLASS10A"],
+    "feeItems": [
+      {
+        "name": "Tuition Fee",
+        "amount": 20000.0
+      },
+      {
+        "name": "Transport Fee",
+        "amount": 3000.0
+      }
+    ],
+    "totalAmount": 23000.0,
+    "dueDate": "2026-09-15",
+    "status": "ACTIVE",
+    "createdBy": "admin",
+    "createdAt": "2026-07-16T17:53:30.123456",
+    "updatedAt": "2026-07-16T17:53:30.123456"
+  }
+}
+```
+
+---
+
+### 8.2 Super Admin: Get Fee Structures
+* **URL**: `/api/admin/fees`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Query Parameters**:
+  * `academicYear` (optional)
+  * `classId` / `class` (optional)
+  * `status` (optional)
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "feeStructureId": "FEE001",
+      "title": "Term 1 Fees",
+      "academicYear": "2026-2027",
+      "classIds": ["CLASS10A"],
+      "totalAmount": 23000.0,
+      "dueDate": "2026-09-15",
+      "status": "ACTIVE"
+    }
+  ]
+}
+```
+
+---
+
+### 8.3 Super Admin: Get Fee Structure
+* **URL**: `/api/admin/fees/<feeStructureId>`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": {
+    "feeStructureId": "FEE001",
+    "title": "Term 1 Fees",
+    "academicYear": "2026-2027",
+    "classIds": ["CLASS10A"],
+    "feeItems": [
+      {
+        "name": "Tuition Fee",
+        "amount": 20000.0
+      }
+    ],
+    "totalAmount": 20000.0,
+    "dueDate": "2026-09-15",
+    "status": "ACTIVE"
+  }
+}
+```
+
+---
+
+### 8.4 Super Admin: Update Fee Structure
+* **URL**: `/api/admin/fees/<feeStructureId>`
+* **Method**: `PUT`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "title": "Term 1 Fees Updated",
+  "academicYear": "2026-2027",
+  "classIds": ["CLASS10A"],
+  "feeItems": [
+    {
+      "name": "Tuition Fee",
+      "amount": 22000.0
+    }
+  ],
+  "dueDate": "2026-09-20"
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Fee structure updated and assignments synchronized successfully.",
+  "data": {
+    "feeStructureId": "FEE001",
+    "title": "Term 1 Fees Updated",
+    "totalAmount": 22000.0,
+    "dueDate": "2026-09-20"
+  }
+}
+```
+
+---
+
+### 8.5 Super Admin: Delete Fee Structure
+* **URL**: `/api/admin/fees/<feeStructureId>`
+* **Method**: `DELETE`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Fee structure and assignments deleted successfully."
+}
+```
+
+---
+
+### 8.6 Super Admin: Fee Dashboard
+* **URL**: `/api/admin/fees/dashboard`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": {
+    "totalFees": 1500000.0,
+    "collected": 900000.0,
+    "pending": 600000.0,
+    "paidStudents": 250,
+    "pendingStudents": 120,
+    "overdueStudents": 40
+  }
+}
+```
+
+---
+
+### 8.7 Super Admin: Student Fee List
+* **URL**: `/api/admin/fees/students`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Query Parameters**:
+  * `classId` / `class` (optional)
+  * `status` (optional)
+  * `studentName` / `name` (optional)
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "classId": "CLASS10A",
+      "feeStructureId": "FEE001",
+      "feeStructureTitle": "Term 1 Fees",
+      "academicYear": "2026-2027",
+      "totalAmount": 24000.0,
+      "paidAmount": 12000.0,
+      "pendingAmount": 12000.0,
+      "status": "PARTIALLY_PAID",
+      "lastReminderAt": null
+    }
+  ]
+}
+```
+
+---
+
+### 8.8 Super Admin: Send Fee Reminder
+* **URL**: `/api/admin/fees/reminder`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "studentIds": ["student1", "student2"],
+  "message": "Please pay your Term 1 fees before the due date."
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Fee reminders sent successfully."
+}
+```
+
+---
+
+### 8.9 Super Admin: Record Fee Payment
+* **URL**: `/api/admin/fees/payment`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+  * `Content-Type: application/json`
+* **Request Body**:
+```json
+{
+  "studentId": "student1",
+  "feeStructureId": "FEE001",
+  "amount": 12000.0,
+  "paymentMode": "Cash",
+  "transactionId": "TXN123456"
+}
+```
+* **Success Response (201 Created)**:
+```json
+{
+  "success": true,
+  "message": "Payment recorded successfully.",
+  "data": {
+    "paymentId": "PAY001",
+    "studentId": "student1",
+    "feeStructureId": "FEE001",
+    "amount": 12000.0,
+    "paymentMode": "Cash",
+    "transactionId": "TXN123456",
+    "paidOn": "2026-07-16T17:56:13.123456",
+    "receivedBy": "admin"
+  }
+}
+```
+
+---
+
+### 8.10 Super Admin: Payment History
+* **URL**: `/api/admin/fees/payments`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Query Parameters**:
+  * `studentId` / `student` (optional)
+  * `classId` / `class` (optional)
+  * `date` (optional, YYYY-MM-DD)
+  * `paymentMode` (optional)
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "paymentId": "PAY001",
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "classId": "CLASS10A",
+      "feeStructureId": "FEE001",
+      "feeStructureTitle": "Term 1 Fees",
+      "amount": 12000.0,
+      "paymentMode": "Cash",
+      "transactionId": "TXN123456",
+      "paidOn": "2026-07-16T17:56:13.123456",
+      "receivedBy": "admin"
+    }
+  ]
+}
+```
+
+---
+
+### 8.11 Teacher: Fee Overview
+* **URL**: `/api/teacher/fees`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Query Parameters**:
+  * `search` (optional, searches student name)
+  * `status` (optional, filters by status, e.g. "PENDING")
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "feeStructureTitle": "Term 1 Fees",
+      "totalAmount": 24000.0,
+      "paidAmount": 12000.0,
+      "pendingAmount": 12000.0,
+      "status": "PARTIALLY_PAID"
+    }
+  ]
+}
+```
+
+---
+
+### 8.12 Teacher: Student Fee Details
+* **URL**: `/api/teacher/fees/<studentId>`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "studentId": "student1",
+      "studentName": "Alice Smith",
+      "feeStructureTitle": "Term 1 Fees",
+      "dueDate": "2026-09-15",
+      "feeItems": [
+        {"name": "Tuition Fee", "amount": 20000.0}
+      ],
+      "totalAmount": 24000.0,
+      "paidAmount": 12000.0,
+      "pendingAmount": 12000.0,
+      "status": "PARTIALLY_PAID"
+    }
+  ]
+}
+```
+
+---
+
+### 8.13 Student: My Fees
+* **URL**: `/api/student/fees`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "feeStructureId": "FEE001",
+      "title": "Term 1 Fees",
+      "dueDate": "2026-09-15",
+      "feeItems": [
+        {"name": "Tuition Fee", "amount": 20000.0}
+      ],
+      "totalAmount": 24000.0,
+      "paidAmount": 12000.0,
+      "pendingAmount": 12000.0,
+      "status": "PARTIALLY_PAID"
+    }
+  ]
+}
+```
+
+---
+
+### 8.14 Student: Payment History
+* **URL**: `/api/student/fees/payments`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "paymentId": "PAY001",
+      "feeStructureTitle": "Term 1 Fees",
+      "amount": 12000.0,
+      "paymentMode": "Cash",
+      "transactionId": "TXN123456",
+      "paidOn": "2026-07-16T17:56:13.123456"
+    }
+  ]
+}
+```
+
+---
+
+### 8.15 Student: Notifications
+* **URL**: `/api/student/fees/notifications`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "_id": "6a58ce48273723da28fd8899",
+      "studentId": "student1",
+      "title": "Fee Reminder",
+      "message": "Please pay your Term 1 fees before the due date.",
+      "isRead": false,
+      "type": "FEE_REMINDER",
+      "createdAt": "2026-07-16T17:57:00.123456"
+    }
+  ]
+}
+```
+
+---
+
+## 9. Online Examination Module
+
+### 9.1 Super Admin: Create Online Exam
+* **URL**: `/api/admin/exams`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Request Body**:
+```json
+{
+  "title": "Mathematics Online Test",
+  "subjectId": "SUB001",
+  "classIds": ["CLASS10A"],
+  "academicYear": "2026-2027",
+  "duration": 60,
+  "passingMarks": 20,
+  "startDateTime": "2026-09-10T09:00:00Z",
+  "endDateTime": "2026-09-10T10:00:00Z",
+  "instructions": "Answer all questions.",
+  "questions": [
+    {
+      "question": "What is 15 x 5?",
+      "type": "MCQ",
+      "options": ["55", "65", "75", "85"],
+      "correctAnswer": "75",
+      "marks": 5,
+      "negativeMarks": 0,
+      "explanation": "15 times 5 is 75."
+    }
+  ]
+}
+```
+* **Success Response (201 Created)**:
+```json
+{
+  "success": true,
+  "message": "Online exam created successfully.",
+  "data": {
+    "examId": "EXM1721461234",
+    "title": "Mathematics Online Test",
+    "subjectId": "SUB001",
+    "classIds": ["CLASS10A"],
+    "academicYear": "2026-2027",
+    "duration": 60,
+    "totalMarks": 5,
+    "passingMarks": 20,
+    "startDateTime": "2026-09-10T09:00:00Z",
+    "endDateTime": "2026-09-10T10:00:00Z",
+    "instructions": "Answer all questions.",
+    "status": "DRAFT",
+    "createdBy": "admin",
+    "createdAt": "...",
+    "updatedAt": "...",
+    "questions": [
+      {
+        "questionId": "Q001",
+        "examId": "EXM1721461234",
+        "question": "What is 15 x 5?",
+        "type": "MCQ",
+        "options": ["55", "65", "75", "85"],
+        "correctAnswer": "75",
+        "marks": 5,
+        "negativeMarks": 0,
+        "explanation": "15 times 5 is 75.",
+        "order": 1
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 9.2 Super Admin: Update Online Exam
+* **URL**: `/api/admin/exams/<examId>`
+* **Method**: `PUT`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Request Body**:
+```json
+{
+  "title": "Updated Mathematics Online Test",
+  "instructions": "Attempt carefully."
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Exam updated successfully.",
+  "data": {
+    "examId": "EXM1721461234",
+    "title": "Updated Mathematics Online Test",
+    "instructions": "Attempt carefully."
+  }
+}
+```
+
+---
+
+### 9.3 Super Admin: Delete Online Exam
+* **URL**: `/api/admin/exams/<examId>`
+* **Method**: `DELETE`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Exam deleted successfully."
+}
+```
+
+---
+
+### 9.4 Super Admin: Publish Online Exam
+* **URL**: `/api/admin/exams/<examId>/publish`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Exam published successfully and notifications dispatched."
+}
+```
+
+---
+
+### 9.5 Super Admin: Close Online Exam
+* **URL**: `/api/admin/exams/<examId>/close`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Exam closed successfully and active attempts auto-submitted."
+}
+```
+
+---
+
+### 9.6 Super Admin: Get Online Exams
+* **URL**: `/api/admin/exams`
+* **Method**: `GET`
+* **Query Parameters**:
+  * `classId`: Filter by class ID
+  * `subjectId`: Filter by subject ID
+  * `academicYear`: Filter by academic year
+  * `status`: Filter by status
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": []
+}
+```
+
+---
+
+### 9.7 Super Admin: Publish Results
+* **URL**: `/api/admin/exams/<examId>/publish-results`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Exam results published successfully and notifications dispatched."
+}
+```
+
+---
+
+### 9.8 Teacher: View Assigned Exams
+* **URL**: `/api/teacher/exams`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": []
+}
+```
+
+---
+
+### 9.9 Teacher: Live Monitoring
+* **URL**: `/api/teacher/exams/<examId>/live`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": {
+    "studentsStarted": 5,
+    "studentsSubmitted": 3,
+    "studentsPending": 2,
+    "activeCount": 2
+  }
+}
+```
+
+---
+
+### 9.10 Teacher: View Student Attempts
+* **URL**: `/api/teacher/exams/<examId>/attempts`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "attemptId": "ATT1721461234",
+      "examId": "EXM1721461234",
+      "studentId": "student_test",
+      "startedAt": "...",
+      "submittedAt": "...",
+      "status": "SUBMITTED",
+      "timeTaken": 45,
+      "student": {
+        "studentId": "student_test",
+        "name": "Alice Smith",
+        "rollNumber": "101",
+        "classId": "CLASS10A"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### 9.11 Student: My Exams
+* **URL**: `/api/student/exams`
+* **Method**: `GET`
+* **Query Parameters**:
+  * `academicYear`: Filter by academic year
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": []
+}
+```
+
+---
+
+### 9.12 Student: Start Exam
+* **URL**: `/api/student/exams/<examId>/start`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (201 Created)**:
+```json
+{
+  "success": true,
+  "message": "Exam attempt started successfully.",
+  "data": {
+    "attemptId": "ATT1721461234",
+    "examId": "EXM1721461234",
+    "studentId": "student_test",
+    "startedAt": "...",
+    "submittedAt": null,
+    "status": "IN_PROGRESS",
+    "timeTaken": 0
+  }
+}
+```
+
+---
+
+### 9.13 Student: Get Exam Questions
+* **URL**: `/api/student/exams/<examId>`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": [
+    {
+      "questionId": "Q001",
+      "examId": "EXM1721461234",
+      "question": "What is 15 x 5?",
+      "type": "MCQ",
+      "options": ["55", "65", "75", "85"],
+      "order": 1
+    }
+  ]
+}
+```
+
+---
+
+### 9.14 Student: Auto Save Answer
+* **URL**: `/api/student/exams/<examId>/save-answer`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Request Body**:
+```json
+{
+  "questionId": "Q001",
+  "selectedAnswer": "75"
+}
+```
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Answer saved successfully."
+}
+```
+
+---
+
+### 9.15 Student: Submit Exam
+* **URL**: `/api/student/exams/<examId>/submit`
+* **Method**: `POST`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Exam submitted and auto-evaluated successfully."
+}
+```
+
+---
+
+### 9.16 Student: View Result
+* **URL**: `/api/student/exams/<examId>/result`
+* **Method**: `GET`
+* **Headers**:
+  * `Authorization: Bearer <jwt_access_token>`
+* **Success Response (200 OK - Results Published)**:
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully.",
+  "data": {
+    "totalQuestions": 3,
+    "correctAnswers": 2,
+    "wrongAnswers": 1,
+    "score": 15,
+    "percentage": 75.0,
+    "grade": "B",
+    "passed": true,
+    "review": [
+      {
+        "questionId": "Q001",
+        "question": "What is 15 x 5?",
+        "type": "MCQ",
+        "options": ["55", "65", "75", "85"],
+        "order": 1,
+        "correctAnswer": "75",
+        "studentAnswer": "75",
+        "explanation": "15 times 5 is 75.",
+        "marks": 5,
+        "isCorrect": true,
+        "marksAwarded": 5
+      }
+    ]
+  }
+}
+```
+* **Success Response (200 OK - Results Not Yet Published)**:
+```json
+{
+  "success": true,
+  "message": "Results have not been published yet.",
+  "data": null
+}
+```
+
+
