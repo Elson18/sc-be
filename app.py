@@ -80,7 +80,10 @@ def create_app(config_class=Config):
         return error_response("This token has been logged out and revoked.", 401)
 
     # Seed Database
-    seed_database(app)
+    try:
+        seed_database(app)
+    except Exception as e:
+        print(f"Warning: Could not seed database on startup: {e}")
 
     return app
 
@@ -93,40 +96,44 @@ def seed_database(app):
     admin_id = app.config.get("DEFAULT_ADMIN_USER_ID", "admin")
     admin_pwd = app.config.get("DEFAULT_ADMIN_PASSWORD", "Admin@123")
     
-    # 1. Ensure the user specified in environment variables is seeded
-    config_admin = db.users.find_one({"userId": admin_id})
-    if not config_admin:
-        hashed = hash_password(admin_pwd)
-        db.users.insert_one({
-            "userId": admin_id,
-            "password": hashed,
-            "role": "SUPER_ADMIN",
-            "active": True,
-            "createdAt": None
-        })
-        print("="*65)
-        print(f"DATABASE SEEDER: Default SUPER_ADMIN user has been successfully created.")
-        print(f"Username: {admin_id}")
-        print(f"Password: {admin_pwd}")
-        print("="*65)
-
-    # 2. Guarantee that the 'admin' ID required by the spec exists
-    if admin_id != "admin":
-        spec_admin = db.users.find_one({"userId": "admin"})
-        if not spec_admin:
-            hashed = hash_password("Admin@123")
+    try:
+        # 1. Ensure the user specified in environment variables is seeded
+        config_admin = db.users.find_one({"userId": admin_id})
+        if not config_admin:
+            hashed = hash_password(admin_pwd)
             db.users.insert_one({
-                "userId": "admin",
+                "userId": admin_id,
                 "password": hashed,
                 "role": "SUPER_ADMIN",
                 "active": True,
                 "createdAt": None
             })
             print("="*65)
-            print(f"DATABASE SEEDER: Spec required SUPER_ADMIN user 'admin' has been successfully created.")
-            print(f"Username: admin")
-            print(f"Password: Admin@123")
+            print(f"DATABASE SEEDER: Default SUPER_ADMIN user has been successfully created.")
+            print(f"Username: {admin_id}")
+            print(f"Password: {admin_pwd}")
             print("="*65)
+
+        # 2. Guarantee that the 'admin' ID required by the spec exists
+        if admin_id != "admin":
+            spec_admin = db.users.find_one({"userId": "admin"})
+            if not spec_admin:
+                hashed = hash_password("Admin@123")
+                db.users.insert_one({
+                    "userId": "admin",
+                    "password": hashed,
+                    "role": "SUPER_ADMIN",
+                    "active": True,
+                    "createdAt": None
+                })
+                print("="*65)
+                print(f"DATABASE SEEDER: Spec required SUPER_ADMIN user 'admin' has been successfully created.")
+                print(f"Username: admin")
+                print(f"Password: Admin@123")
+                print("="*65)
+    except Exception as e:
+        print(f"Warning: Database seeding skipped due to connection error: {e}")
+
 
 app = create_app()
 
