@@ -7,7 +7,10 @@ def parse_iso_datetime(v: str) -> datetime:
         # Normalize Z to +00:00 for older Python compatibility
         if v.endswith("Z"):
             v = v[:-1] + "+00:00"
-        return datetime.fromisoformat(v)
+        dt = datetime.fromisoformat(v)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except Exception:
         raise ValueError("Datetime must be in ISO 8601 format (e.g. YYYY-MM-DDTHH:MM:SSZ)")
 
@@ -99,7 +102,6 @@ class CreateOnlineExamSchema(BaseModel):
     @field_validator("startDateTime", "endDateTime")
     @classmethod
     def validate_iso_format(cls, v: str) -> str:
-        # Just check it can be parsed
         parse_iso_datetime(v)
         return v
 
@@ -133,6 +135,7 @@ class UpdateOnlineExamSchema(BaseModel):
     endDateTime: Optional[str] = Field(None)
     instructions: Optional[str] = Field(None)
     totalMarks: Optional[int] = Field(None, ge=1)
+    questions: Optional[List[QuestionSchema]] = Field(None)
 
     @field_validator("startDateTime", "endDateTime")
     @classmethod
@@ -143,14 +146,23 @@ class UpdateOnlineExamSchema(BaseModel):
 
     @model_validator(mode="after")
     def validate_exam_limits(self) -> 'UpdateOnlineExamSchema':
-        # Validate dates if both are provided
         if self.startDateTime is not None and self.endDateTime is not None:
             start = parse_iso_datetime(self.startDateTime)
             end = parse_iso_datetime(self.endDateTime)
             if start >= end:
                 raise ValueError("startDateTime must be before endDateTime")
+
+        if self.questions is not None:
+            total_q_marks = sum(q.marks for q in self.questions)
+            if self.totalMarks is not None:
+                if self.totalMarks != total_q_marks:
+                    raise ValueError(f"Total exam marks ({self.totalMarks}) must equal the sum of all question marks ({total_q_marks}).")
+            else:
+                self.totalMarks = total_q_marks
+
         return self
 
 class SaveAnswerSchema(BaseModel):
     questionId: str = Field(..., min_length=1)
     selectedAnswer: Union[str, List[str]] = Field(..., description="Selected answer(s)")
+

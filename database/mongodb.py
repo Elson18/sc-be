@@ -8,8 +8,9 @@ class Database:
 
     def init_app(self, app):
         mongo_uri = app.config.get("MONGO_URI", Config.MONGO_URI)
-        # Initialize MongoClient
-        self.client = MongoClient(mongo_uri)
+        # Initialize MongoClient with reasonable timeout
+        self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
+
         # Extract db name from URI or use default
         db_name = mongo_uri.split('/')[-1] if '/' in mongo_uri else 'student_rank_card_db'
         if '?' in db_name:
@@ -22,8 +23,12 @@ class Database:
         app.db = self.db
         
         # Ensure Indexes
-        self._ensure_indexes()
+        try:
+            self._ensure_indexes()
+        except Exception as e:
+            print(f"Warning: Could not initialize database indexes: {e}")
         return self.db
+
         
     def _ensure_indexes(self):
         if self.db is None:

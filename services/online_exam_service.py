@@ -8,10 +8,13 @@ from utils.helpers import serialize_doc
 def parse_iso_datetime(v: str) -> datetime:
     if v.endswith("Z"):
         v = v[:-1] + "+00:00"
-    return datetime.fromisoformat(v)
+    dt = datetime.fromisoformat(v)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 def compare_answers(selected, correct, question_type):
-    if selected is None or correct is None:
+    if selected is None or correct is None or selected == "" or selected == []:
         return False
         
     if question_type == "MULTIPLE_SELECT":
@@ -54,14 +57,12 @@ class OnlineExamService:
                 return error_response(f"Class ID '{cid}' not found.", 404)
 
         # Validate duplicate title for same class, subject, and academic year
-        # Query online exams with same title, subject, and academicYear
         dup_exams = OnlineExamRepository.find_exams({
             "title": data["title"],
             "subjectId": data["subjectId"],
             "academicYear": data["academicYear"]
         })
         for de in dup_exams:
-            # Check if there is any overlap in classIds
             overlap = set(de.get("classIds", [])).intersection(set(data["classIds"]))
             if overlap:
                 return error_response("An exam with this title already exists for one of the specified classes, subject, and academic year.", 400)
@@ -166,9 +167,31 @@ class OnlineExamService:
                 return error_response("An exam with this title already exists for one of the specified classes, subject, and academic year.", 400)
 
         now = datetime.now(timezone.utc)
-        allowed_keys = ["title", "subjectId", "classIds", "academicYear", "duration", "passingMarks", "startDateTime", "endDateTime", "instructions"]
+        allowed_keys = ["title", "subjectId", "classIds", "academicYear", "duration", "passingMarks", "startDateTime", "endDateTime", "instructions", "totalMarks"]
         fields_to_set = {k: v for k, v in data.items() if k in allowed_keys and v is not None}
         fields_to_set["updatedAt"] = now
+
+        # Update questions if provided
+        if "questions" in data and data["questions"] is not None:
+            questions_input = data["questions"]
+            question_docs = []
+            for i, q in enumerate(questions_input):
+                q_id = q.get("questionId") or f"Q{i+1:03d}"
+                question_docs.append({
+                    "questionId": q_id,
+                    "examId": exam_id,
+                    "question": q["question"],
+                    "type": q["type"],
+                    "options": q.get("options"),
+                    "correctAnswer": q["correctAnswer"],
+                    "marks": q["marks"],
+                    "negativeMarks": q.get("negativeMarks", 0),
+                    "explanation": q.get("explanation", ""),
+                    "order": q.get("order") or (i + 1)
+                })
+            fields_to_set["totalMarks"] = sum(q["marks"] for q in question_docs)
+            OnlineExamRepository.delete_questions_by_exam_id(exam_id)
+            OnlineExamRepository.bulk_create_questions(question_docs)
 
         updated = OnlineExamRepository.update_exam(exam_id, fields_to_set)
         return success_response(message="Exam updated successfully.", data=serialize_doc(updated))
@@ -179,6 +202,9 @@ class OnlineExamService:
         if not exam:
             return error_response("Exam not found.", 404)
 
+        if exam.get("status") != "DRAFT":
+            return error_response("Only DRAFT exams with no attempts can be deleted.", 400)
+
         # Check if any student started
         attempts_count = len(OnlineExamRepository.get_attempts_by_exam_id(exam_id))
         if attempts_count > 0:
@@ -186,6 +212,7 @@ class OnlineExamService:
 
         OnlineExamRepository.delete_exam(exam_id)
         return success_response(message="Exam deleted successfully.")
+
 
     @staticmethod
     def publish_exam(admin_user_id, exam_id):
@@ -255,7 +282,7 @@ class OnlineExamService:
                 ans_doc = student_answers.get(q_id)
                 selected_ans = ans_doc.get("selectedAnswer") if ans_doc else None
 
-                if selected_ans is not None:
+                if selected_ans is not None and selected_ans != "" and selected_ans != []:
                     is_correct = compare_answers(selected_ans, q["correctAnswer"], q["type"])
                     if is_correct:
                         correct_count += 1
@@ -267,6 +294,7 @@ class OnlineExamService:
                     is_correct = False
                     wrong_count += 1
                     marks_awarded = 0
+
 
                 score += marks_awarded
 
@@ -448,6 +476,22 @@ class OnlineExamService:
         return success_response(data=attempts_list)
 
     @staticmethod
+    def publish_results_teacher(teacher_user_id, exam_id):
+        exam = OnlineExamRepository.get_exam_by_id(exam_id)
+        if not exam:
+            return error_response("Exam not found.", 404)
+
+        teacher = OnlineExamRepository.get_teacher_by_userId(teacher_user_id)
+        if not teacher:
+            return error_response("Teacher profile not found.", 404)
+
+        overlap = set(exam["classIds"]).intersection(set(teacher.get("assignedClasses", [])))
+        if not overlap:
+            return error_response("Access denied. You do not teach any class assigned to this exam.", 403)
+
+        return OnlineExamService.publish_results(teacher_user_id, exam_id)
+
+    @staticmethod
     def get_exams_student(student_user_id, filters):
         student = OnlineExamRepository.get_student_by_userId(student_user_id)
         if not student:
@@ -464,8 +508,33 @@ class OnlineExamService:
         if academic_year:
             query["academicYear"] = academic_year
 
-        exams = OnlineExamRepository.find_exams(query)
-        return success_response(data=serialize_doc(exams))
+        raw_exams = OnlineExamRepository.find_exams(query)
+        now = datetime.now(timezone.utc)
+
+        result_exams = []
+        for exam in raw_exams:
+            exam_doc = serialize_doc(exam)
+            attempt = OnlineExamRepository.get_attempt_by_student_and_exam(student["studentId"], exam["examId"])
+            
+            if attempt and attempt.get("status") == "SUBMITTED":
+                student_status = "Completed"
+            elif attempt and attempt.get("status") == "IN_PROGRESS":
+                student_status = "Active"
+            else:
+                start_dt = parse_iso_datetime(exam["startDateTime"])
+                end_dt = parse_iso_datetime(exam["endDateTime"])
+                if now < start_dt:
+                    student_status = "Upcoming"
+                elif now > end_dt:
+                    student_status = "Missed"
+                else:
+                    student_status = "Active"
+            
+            exam_doc["status"] = student_status
+            result_exams.append(exam_doc)
+
+        return success_response(data=result_exams)
+
 
     @staticmethod
     def start_exam(student_user_id, exam_id):
@@ -596,7 +665,7 @@ class OnlineExamService:
             ans_doc = student_answers.get(q_id)
             selected_ans = ans_doc["selectedAnswer"] if ans_doc else None
 
-            if selected_ans is not None:
+            if selected_ans is not None and selected_ans != "" and selected_ans != []:
                 is_correct = compare_answers(selected_ans, q["correctAnswer"], q["type"])
                 if is_correct:
                     correct_count += 1
@@ -608,6 +677,7 @@ class OnlineExamService:
                 is_correct = False
                 wrong_count += 1
                 marks_awarded = 0
+
 
             score += marks_awarded
 

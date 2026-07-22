@@ -102,6 +102,13 @@ def teacher_get_attempts(examId):
     teacher_user_id = get_jwt_identity()
     return OnlineExamService.get_attempts(teacher_user_id, examId)
 
+@online_exams_bp.route("/teacher/exams/<examId>/publish-results", methods=["POST"])
+@role_required("TEACHER")
+def teacher_publish_results(examId):
+    teacher_user_id = get_jwt_identity()
+    return OnlineExamService.publish_results_teacher(teacher_user_id, examId)
+
+
 
 # ==========================================
 # STUDENT ROUTE HANDLERS
