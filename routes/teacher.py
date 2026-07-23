@@ -27,10 +27,11 @@ def get_classes():
     classes_list = []
     for cid in assigned_class_ids:
         class_filter = {"_id": cid}
-        try:
-            class_filter = {"_id": ObjectId(cid)}
-        except Exception:
-            pass
+        if ObjectId.is_valid(str(cid)):
+            try:
+                class_filter = {"$or": [{"_id": cid}, {"_id": ObjectId(cid)}]}
+            except Exception:
+                pass
         cls = db.classes.find_one(class_filter)
         if cls:
             classes_list.append(cls)

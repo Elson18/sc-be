@@ -1,4 +1,5 @@
 import time
+import uuid
 from datetime import datetime, timezone
 from bson import ObjectId
 from repositories.online_exam_repository import OnlineExamRepository
@@ -346,7 +347,15 @@ class OnlineExamService:
             })
 
             # Mark attempt as SUBMITTED/CLOSED
-            time_taken = int((now - attempt["startedAt"].replace(tzinfo=timezone.utc)).total_seconds()) if attempt.get("startedAt") else 0
+            started_at = attempt.get("startedAt")
+            if started_at:
+                if isinstance(started_at, str):
+                    started_at = parse_iso_datetime(started_at)
+                elif started_at.tzinfo is None:
+                    started_at = started_at.replace(tzinfo=timezone.utc)
+                time_taken = int((now - started_at).total_seconds())
+            else:
+                time_taken = 0
             OnlineExamRepository.update_attempt(attempt["attemptId"], {
                 "status": "SUBMITTED",
                 "submittedAt": now,
@@ -394,6 +403,16 @@ class OnlineExamService:
 
         exams = OnlineExamRepository.find_exams(query)
         return success_response(data=serialize_doc(exams))
+
+    @staticmethod
+    def get_exam_by_id_admin(exam_id):
+        exam = OnlineExamRepository.get_exam_by_id(exam_id)
+        if not exam:
+            return success_response(data=[])
+        questions = OnlineExamRepository.get_questions_by_exam_id(exam_id)
+        exam_doc = serialize_doc(exam)
+        exam_doc["questions"] = serialize_doc(questions)
+        return success_response(data=exam_doc)
 
     @staticmethod
     def get_exams_teacher(teacher_user_id):
@@ -574,7 +593,7 @@ class OnlineExamService:
                 return success_response(message="Resuming exam attempt.", data=serialize_doc(attempt))
 
         # Create attempt
-        attempt_id = f"ATT{int(time.time())}"
+        attempt_id = f"ATT{int(time.time()*1000)}_{uuid.uuid4().hex[:6]}"
         attempt_doc = {
             "attemptId": attempt_id,
             "examId": exam_id,

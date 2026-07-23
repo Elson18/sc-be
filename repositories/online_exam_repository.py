@@ -156,20 +156,22 @@ class OnlineExamRepository:
     def get_class_by_id(cls, class_id):
         db = cls.get_db()
         class_filter = {"_id": class_id}
-        try:
-            class_filter = {"_id": ObjectId(class_id)}
-        except Exception:
-            pass
+        if ObjectId.is_valid(str(class_id)):
+            try:
+                class_filter = {"$or": [{"_id": class_id}, {"_id": ObjectId(class_id)}]}
+            except Exception:
+                pass
         return db.classes.find_one(class_filter)
         
     @classmethod
     def get_subject_by_id(cls, subject_id):
         db = cls.get_db()
         sub_filter = {"_id": subject_id}
-        try:
-            sub_filter = {"_id": ObjectId(subject_id)}
-        except Exception:
-            pass
+        if ObjectId.is_valid(str(subject_id)):
+            try:
+                sub_filter = {"$or": [{"_id": subject_id}, {"_id": ObjectId(subject_id)}]}
+            except Exception:
+                pass
         subject = db.subjects.find_one(sub_filter)
         if not subject:
             subject = db.subjects.find_one({"subjectName": subject_id})

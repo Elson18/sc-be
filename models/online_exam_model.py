@@ -87,6 +87,7 @@ class QuestionSchema(BaseModel):
         return self
 
 class CreateOnlineExamSchema(BaseModel):
+    examId: Optional[str] = Field(None)
     title: str = Field(..., min_length=2, max_length=100)
     subjectId: str = Field(..., min_length=1)
     classIds: List[str] = Field(..., min_length=1)

@@ -65,10 +65,11 @@ class SuperAdminService:
             
         # Verify class exists
         class_filter = {"_id": class_id}
-        try:
-            class_filter = {"_id": ObjectId(class_id)}
-        except Exception:
-            pass
+        if ObjectId.is_valid(str(class_id)):
+            try:
+                class_filter = {"$or": [{"_id": class_id}, {"_id": ObjectId(class_id)}]}
+            except Exception:
+                pass
         cls = db.classes.find_one(class_filter)
         if not cls:
             return error_response("Class ID not found.", 404)
@@ -197,10 +198,11 @@ class SuperAdminService:
             return error_response("Teacher not found.", 404)
             
         class_filter = {"_id": class_id}
-        try:
-            class_filter = {"_id": ObjectId(class_id)}
-        except Exception:
-            pass
+        if ObjectId.is_valid(str(class_id)):
+            try:
+                class_filter = {"$or": [{"_id": class_id}, {"_id": ObjectId(class_id)}]}
+            except Exception:
+                pass
         cls = db.classes.find_one(class_filter)
         if not cls:
             return error_response("Class not found.", 404)

@@ -22,7 +22,11 @@ class AuthService:
             return error_response("Invalid credentials.", 401)
             
         # Generate JWT with custom role claim
-        additional_claims = {"role": user["role"]}
+        user_role = str(user.get("role", "")).upper()
+        additional_claims = {
+            "userId": user["userId"],
+            "role": user_role
+        }
         access_token = create_access_token(identity=user_id, additional_claims=additional_claims)
         
         # Build user profile context

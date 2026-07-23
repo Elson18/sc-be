@@ -73,6 +73,11 @@ def admin_get_exams():
     }
     return OnlineExamService.get_exams_admin(filters)
 
+@online_exams_bp.route("/admin/exams/<examId>", methods=["GET"])
+@role_required("SUPER_ADMIN")
+def admin_get_exam_by_id(examId):
+    return OnlineExamService.get_exam_by_id_admin(examId)
+
 @online_exams_bp.route("/admin/exams/<examId>/publish-results", methods=["POST"])
 @role_required("SUPER_ADMIN")
 def admin_publish_results(examId):
