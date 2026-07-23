@@ -55,7 +55,7 @@ def match_query(doc, query):
             if "$exists" in v:
                 exists = k in doc
                 if exists != v["$exists"]: return False
-        elif val != v:
+        elif val != v and str(val) != str(v):
             if isinstance(val, list) and v in val:
                 continue
             return False
@@ -118,9 +118,15 @@ class MockCollection:
 
     def update_one(self, filter, update, upsert=False):
         fields_to_set = update.get("$set", {})
+        add_to_set = update.get("$addToSet", {})
         for d in self.docs:
             if match_query(d, filter):
                 d.update(fields_to_set)
+                for k, v in add_to_set.items():
+                    if k not in d or not isinstance(d[k], list):
+                        d[k] = []
+                    if v not in d[k]:
+                        d[k].append(v)
                 class Res:
                     matched_count = 1
                     modified_count = 1
