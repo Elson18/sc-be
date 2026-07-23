@@ -594,6 +594,112 @@ class FeesService:
         return success_response(data=result)
 
     @staticmethod
+    def teacher_record_payment(teacher_user_id, student_id, amount, payment_mode, payment_date=None, remarks="", fee_id=None, fee_structure_id=None):
+        """Allows teachers to record a payment for a student in their assigned classes."""
+        db = db_wrapper.db
+        if db is None:
+            return error_response("Database connection not ready.", 500)
+
+        # Verify teacher exists
+        teacher = db.teachers.find_one({"userId": teacher_user_id})
+        if not teacher:
+            return error_response("Teacher profile not found.", 404)
+
+        # Verify student exists
+        student = db.students.find_one({"studentId": student_id})
+        if not student:
+            return error_response("Student profile not found.", 404)
+
+        # Verify access
+        assigned_classes = teacher.get("assignedClasses", [])
+        if student.get("classId") not in assigned_classes:
+            return error_response("Access denied. Student is not in your assigned classes.", 403)
+
+        if amount is None or amount <= 0:
+            return error_response("Payment amount must be greater than 0.", 400)
+
+        target_fee_struct_id = fee_structure_id or fee_id
+        if target_fee_struct_id:
+            student_fee = db.student_fees.find_one({"studentId": student_id, "feeStructureId": target_fee_struct_id})
+        else:
+            student_fee = db.student_fees.find_one({"studentId": student_id, "pendingAmount": {"$gt": 0}})
+            if not student_fee:
+                student_fee = db.student_fees.find_one({"studentId": student_id})
+
+        if not student_fee:
+            return error_response("No fee structure assignment found for this student.", 400)
+
+        target_fee_struct_id = student_fee["feeStructureId"]
+        fee_struct = db.fee_structures.find_one({"feeStructureId": target_fee_struct_id})
+
+        pending = student_fee.get("pendingAmount", 0)
+        if amount > pending:
+            return error_response("Payment amount exceeds remaining fee balance.", 400)
+
+        count = db.fee_payments.count_documents({})
+        payment_id = f"PAY{count + 1:03d}"
+        while db.fee_payments.find_one({"paymentId": payment_id}):
+            count += 1
+            payment_id = f"PAY{count + 1:03d}"
+
+        now = datetime.now(timezone.utc)
+        p_date = payment_date or now.strftime("%Y-%m-%d")
+
+        payment_doc = {
+            "paymentId": payment_id,
+            "studentId": student_id,
+            "feeId": target_fee_struct_id,
+            "feeStructureId": target_fee_struct_id,
+            "amount": amount,
+            "paymentDate": p_date,
+            "paymentMode": payment_mode,
+            "remarks": remarks or "",
+            "updatedBy": teacher_user_id,
+            "createdAt": now,
+            "paidOn": now,
+            "transactionId": f"TXN_{payment_id}"
+        }
+        db.fee_payments.insert_one(payment_doc)
+
+        new_paid = student_fee.get("paidAmount", 0) + amount
+        new_pending = student_fee.get("pendingAmount", 0) - amount
+
+        if new_pending <= 0:
+            new_status = "PAID"
+        else:
+            due_date_str = fee_struct.get("dueDate") if fee_struct else None
+            current_date_str = now.strftime("%Y-%m-%d")
+            if due_date_str and current_date_str > due_date_str:
+                new_status = "OVERDUE"
+            else:
+                new_status = "PARTIALLY_PAID"
+
+        db.student_fees.update_one(
+            {"_id": student_fee["_id"]},
+            {"$set": {
+                "paidAmount": new_paid,
+                "pendingAmount": new_pending,
+                "status": new_status,
+                "updatedAt": now
+            }}
+        )
+
+        db.fee_notifications.insert_one({
+            "studentId": student_id,
+            "title": "Payment Recorded",
+            "message": f"A payment of {amount} has been recorded for '{fee_struct.get('title') if fee_struct else ''}'. Status is now {new_status}.",
+            "isRead": False,
+            "type": "FEE_PAYMENT",
+            "createdAt": now
+        })
+
+        return success_response(
+            message="Payment recorded successfully.",
+            data=serialize_doc(payment_doc),
+            status_code=201
+        )
+
+    @staticmethod
     def get_teacher_student_details(teacher_user_id, student_id):
         """Allows teachers to view read-only fee details of a student in their assigned classes."""
         db = db_wrapper.db
@@ -616,7 +722,12 @@ class FeesService:
             return error_response("Access denied. Student is not in your assigned classes.", 403)
             
         fees_records = list(db.student_fees.find({"studentId": student_id}))
+        payments = list(db.fee_payments.find({"studentId": student_id}).sort("createdAt", -1))
         
+        total_fee = sum(f.get("totalAmount", 0) for f in fees_records)
+        total_paid = sum(f.get("paidAmount", 0) for f in fees_records)
+        remaining_amount = max(0, total_fee - total_paid)
+
         result = []
         for rec in fees_records:
             struct_doc = db.fee_structures.find_one({"feeStructureId": rec["feeStructureId"]})
@@ -626,12 +737,28 @@ class FeesService:
             rec_serialized["dueDate"] = struct_doc.get("dueDate") if struct_doc else None
             rec_serialized["feeItems"] = struct_doc.get("feeItems") if struct_doc else []
             result.append(rec_serialized)
+
+        history = [serialize_doc(p) for p in payments]
+
+        summary_data = {
+            "studentId": student_id,
+            "studentName": student.get("name"),
+            "totalFee": total_fee,
+            "totalPaid": total_paid,
+            "paidAmount": total_paid,
+            "remainingAmount": remaining_amount,
+            "outstandingAmount": remaining_amount,
+            "paymentHistory": history,
+            "payments": history,
+            "feeDetails": result,
+            "fees": result
+        }
             
-        return success_response(data=result)
+        return success_response(data=summary_data)
 
     @staticmethod
     def get_student_fees(student_user_id):
-        """Allows students to view their fee assignments."""
+        """Allows students to view their fee assignments, summary, and payment history."""
         db = db_wrapper.db
         if db is None:
             return error_response("Database connection not ready.", 500)
@@ -644,7 +771,12 @@ class FeesService:
             
         student_id = student.get("studentId")
         fees_records = list(db.student_fees.find({"studentId": student_id}))
+        payments = list(db.fee_payments.find({"studentId": student_id}).sort("createdAt", -1))
         
+        total_fee = sum(f.get("totalAmount", 0) for f in fees_records)
+        total_paid = sum(f.get("paidAmount", 0) for f in fees_records)
+        remaining_amount = max(0, total_fee - total_paid)
+
         result = []
         for rec in fees_records:
             struct_doc = db.fee_structures.find_one({"feeStructureId": rec["feeStructureId"]})
@@ -654,7 +786,20 @@ class FeesService:
             rec_serialized["feeItems"] = struct_doc.get("feeItems") if struct_doc else []
             result.append(rec_serialized)
             
-        return success_response(data=result)
+        history = [serialize_doc(p) for p in payments]
+
+        summary_data = {
+            "totalFee": total_fee,
+            "totalPaid": total_paid,
+            "paidAmount": total_paid,
+            "remainingAmount": remaining_amount,
+            "outstandingAmount": remaining_amount,
+            "history": history,
+            "paymentHistory": history,
+            "fees": result
+        }
+
+        return success_response(data=summary_data)
 
     @staticmethod
     def get_student_payments(student_user_id):

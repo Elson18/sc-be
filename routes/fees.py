@@ -7,7 +7,8 @@ from models.fees_model import (
     CreateFeeStructureSchema,
     UpdateFeeStructureSchema,
     RecordPaymentSchema,
-    SendReminderSchema
+    SendReminderSchema,
+    TeacherRecordPaymentSchema
 )
 from utils.response import error_response
 
@@ -153,6 +154,31 @@ def get_teacher_fees_overview():
 def get_teacher_student_fees_details(studentId):
     current_user_id = get_jwt_identity()
     return FeesService.get_teacher_student_details(current_user_id, studentId)
+
+@fees_bp.route("/api/teacher/fees/<studentId>/payments", methods=["POST"])
+@role_required("TEACHER")
+def teacher_record_payment(studentId):
+    try:
+        data = request.get_json()
+        if not data:
+            return error_response("Request body is missing.", 400)
+        validated = TeacherRecordPaymentSchema(**data)
+    except ValidationError as err:
+        return error_response(f"Validation error: {err.errors()[0]['msg']}", 400)
+    except Exception:
+        return error_response("Invalid JSON format in body.", 400)
+        
+    current_user_id = get_jwt_identity()
+    return FeesService.teacher_record_payment(
+        teacher_user_id=current_user_id,
+        student_id=studentId,
+        amount=validated.amount,
+        payment_mode=validated.paymentMode,
+        payment_date=validated.paymentDate,
+        remarks=validated.remarks,
+        fee_id=validated.feeId,
+        fee_structure_id=validated.feeStructureId
+    )
 
 # --- STUDENT APIs ---
 

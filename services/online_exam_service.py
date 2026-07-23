@@ -370,8 +370,11 @@ class OnlineExamService:
         if not exam:
             return error_response("Exam not found.", 404)
 
+        if exam.get("status") == "RESULT_PUBLISHED" or exam.get("publishedResults") is True:
+            return success_response(message="Results already published.")
+
         now = datetime.now(timezone.utc)
-        OnlineExamRepository.publish_results(exam_id)
+        OnlineExamRepository.publish_results(exam_id, published_at=now)
         OnlineExamRepository.update_exam(exam_id, {
             "status": "RESULT_PUBLISHED",
             "publishedResults": True,
@@ -394,6 +397,26 @@ class OnlineExamService:
                 })
 
         return success_response(message="Exam results published successfully and notifications dispatched.")
+
+    @staticmethod
+    def reset_student_attempt(admin_user_id, exam_id, student_id):
+        exam = OnlineExamRepository.get_exam_by_id(exam_id)
+        if not exam:
+            return error_response("Exam not found.", 404)
+
+        student = OnlineExamRepository.get_student_by_studentId(student_id)
+        if not student:
+            return error_response("Student not found.", 404)
+
+        if student.get("classId") not in exam.get("classIds", []):
+            return error_response("Student does not belong to any class assigned to this exam.", 400)
+
+        attempt = OnlineExamRepository.get_attempt_by_student_and_exam(student_id, exam_id)
+        if not attempt:
+            return error_response("No exam attempt found for this student.", 404)
+
+        OnlineExamRepository.delete_attempt(student_id, exam_id)
+        return success_response(message="Student exam attempt has been reset successfully.")
 
     @staticmethod
     def get_exams_admin(filters):
@@ -603,7 +626,7 @@ class OnlineExamService:
         attempt = OnlineExamRepository.get_attempt_by_student_and_exam(student["studentId"], exam_id)
         if attempt:
             if attempt.get("status") == "SUBMITTED":
-                return error_response("You have already submitted an attempt for this exam.", 400)
+                return error_response("You have already submitted this exam.", 400)
             else:
                 # Return existing in progress attempt details
                 return success_response(message="Resuming exam attempt.", data=serialize_doc(attempt))
@@ -872,9 +895,13 @@ class OnlineExamService:
             else:
                 submitted_at_str = str(submitted_at) if submitted_at else None
 
+            subject_doc = OnlineExamRepository.get_subject_by_id(exam["subjectId"]) if (exam and exam.get("subjectId")) else None
+            subject_name = subject_doc.get("subjectName") if subject_doc else (exam.get("subjectId", "") if exam else "")
+
             merged_results.append({
                 "examId": res["examId"],
                 "title": exam["title"] if exam else "",
+                "subject": subject_name,
                 "subjectId": exam["subjectId"] if exam else "",
                 "academicYear": exam.get("academicYear", "") if exam else "",
                 "duration": exam.get("duration", 0) if exam else 0,

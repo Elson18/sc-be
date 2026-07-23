@@ -128,9 +128,24 @@ class OnlineExamRepository:
         return result_doc
 
     @classmethod
-    def publish_results(cls, exam_id):
+    def publish_results(cls, exam_id, published_at=None):
         db = cls.get_db()
-        db.exam_results.update_many({"examId": exam_id}, {"$set": {"published": True}})
+        update_doc = {"published": True}
+        if published_at:
+            update_doc["publishedAt"] = published_at
+        db.exam_results.update_many({"examId": exam_id}, {"$set": update_doc})
+
+    @classmethod
+    def delete_attempt(cls, student_id, exam_id):
+        db = cls.get_db()
+        attempt = db.exam_attempts.find_one({"studentId": student_id, "examId": exam_id})
+        if attempt:
+            att_id = attempt.get("attemptId")
+            db.student_answers.delete_many({"attemptId": att_id})
+            db.exam_attempts.delete_one({"_id": attempt["_id"]})
+        # Also clean up any student_answers directly matching studentId and examId if present
+        db.exam_results.delete_many({"studentId": student_id, "examId": exam_id})
+        return True
 
     @classmethod
     def get_student_by_userId(cls, user_id):

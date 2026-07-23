@@ -84,6 +84,13 @@ def admin_publish_results(examId):
     admin_user_id = get_jwt_identity()
     return OnlineExamService.publish_results(admin_user_id, examId)
 
+@online_exams_bp.route("/admin/exams/<examId>/students/<studentId>/reset-attempt", methods=["POST"])
+@role_required("SUPER_ADMIN")
+def admin_reset_attempt(examId, studentId):
+    admin_user_id = get_jwt_identity()
+    return OnlineExamService.reset_student_attempt(admin_user_id, examId, studentId)
+
+
 
 # ==========================================
 # TEACHER ROUTE HANDLERS

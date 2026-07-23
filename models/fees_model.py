@@ -48,3 +48,12 @@ class RecordPaymentSchema(BaseModel):
 class SendReminderSchema(BaseModel):
     studentIds: List[str] = Field(..., min_items=1, description="List of student IDs.")
     message: str = Field(..., min_length=1, description="Reminder message.")
+
+class TeacherRecordPaymentSchema(BaseModel):
+    amount: float = Field(..., gt=0, description="Payment amount. Must be greater than 0.")
+    paymentMode: str = Field(..., min_length=1, description="Payment mode (e.g. Cash, Card, Online).")
+    paymentDate: Optional[str] = Field(None, description="Payment date in ISO format or YYYY-MM-DD.")
+    remarks: Optional[str] = Field("", description="Optional remarks.")
+    feeId: Optional[str] = Field(None, description="Fee structure or item ID.")
+    feeStructureId: Optional[str] = Field(None, description="Fee Structure ID.")
+
