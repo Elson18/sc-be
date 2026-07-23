@@ -372,6 +372,12 @@ class OnlineExamService:
 
         now = datetime.now(timezone.utc)
         OnlineExamRepository.publish_results(exam_id)
+        OnlineExamRepository.update_exam(exam_id, {
+            "status": "RESULT_PUBLISHED",
+            "publishedResults": True,
+            "resultsPublishedAt": now,
+            "updatedAt": now
+        })
 
         # Notify students who attempted the exam
         attempts = OnlineExamRepository.get_attempts_by_exam_id(exam_id)
@@ -518,7 +524,7 @@ class OnlineExamService:
 
         class_id = student["classId"]
         query = {
-            "status": "PUBLISHED",
+            "status": {"$in": ["PUBLISHED", "ACTIVE", "CLOSED", "RESULT_PUBLISHED"]},
             "classIds": class_id
         }
 
@@ -535,7 +541,14 @@ class OnlineExamService:
             exam_doc = serialize_doc(exam)
             attempt = OnlineExamRepository.get_attempt_by_student_and_exam(student["studentId"], exam["examId"])
             
-            if attempt and attempt.get("status") == "SUBMITTED":
+            has_attempted = attempt is not None
+            is_result_published = bool(exam.get("publishedResults", False) or exam.get("status") == "RESULT_PUBLISHED" or exam.get("resultPublished", False))
+
+            if exam.get("status") == "RESULT_PUBLISHED":
+                student_status = "RESULT_PUBLISHED"
+            elif exam.get("status") == "CLOSED":
+                student_status = "CLOSED"
+            elif attempt and attempt.get("status") == "SUBMITTED":
                 student_status = "Completed"
             elif attempt and attempt.get("status") == "IN_PROGRESS":
                 student_status = "Active"
@@ -549,6 +562,9 @@ class OnlineExamService:
                 else:
                     student_status = "Active"
             
+            exam_doc["hasAttempted"] = has_attempted
+            exam_doc["resultPublished"] = is_result_published
+            exam_doc["publishedResults"] = is_result_published
             exam_doc["status"] = student_status
             result_exams.append(exam_doc)
 
@@ -788,10 +804,13 @@ class OnlineExamService:
             return error_response("Student profile not found.", 404)
 
         result = OnlineExamRepository.get_result(exam_id, student["studentId"])
-        if not result:
-            return error_response("No result record found for this exam attempt.", 404)
+        exam = OnlineExamRepository.get_exam_by_id(exam_id)
 
-        if not result.get("published", False):
+        is_published = (result and result.get("published") is True) or (exam and (exam.get("status") == "RESULT_PUBLISHED" or exam.get("publishedResults") is True))
+
+        if not result or not is_published:
+            if not result:
+                return error_response("No result record found for this exam attempt.", 404)
             return success_response(message="Results have not been published yet.", data=None)
 
         # Retrieve questions
@@ -826,7 +845,54 @@ class OnlineExamService:
             "percentage": result["percentage"],
             "grade": result["grade"],
             "passed": result["passed"],
+            "pass": result["passed"],
             "review": review_list
         }
 
         return success_response(data=res_data)
+
+    @staticmethod
+    def get_student_exam_results(student_user_id):
+        student = OnlineExamRepository.get_student_by_userId(student_user_id)
+        if not student:
+            return error_response("Student profile not found.", 404)
+
+        raw_results = OnlineExamRepository.get_student_results(student["studentId"])
+        merged_results = []
+
+        for res in raw_results:
+            exam = OnlineExamRepository.get_exam_by_id(res["examId"])
+            is_pub = (res.get("published") is True) or (exam and (exam.get("status") == "RESULT_PUBLISHED" or exam.get("publishedResults") is True))
+            if not is_pub:
+                continue
+
+            submitted_at = res.get("submittedAt")
+            if isinstance(submitted_at, datetime):
+                submitted_at_str = submitted_at.isoformat()
+            else:
+                submitted_at_str = str(submitted_at) if submitted_at else None
+
+            merged_results.append({
+                "examId": res["examId"],
+                "title": exam["title"] if exam else "",
+                "subjectId": exam["subjectId"] if exam else "",
+                "academicYear": exam.get("academicYear", "") if exam else "",
+                "duration": exam.get("duration", 0) if exam else 0,
+                "totalMarks": exam.get("totalMarks", 0) if exam else 0,
+                "score": res.get("score", 0),
+                "correctAnswers": res.get("correctAnswers", 0),
+                "wrongAnswers": res.get("wrongAnswers", 0),
+                "totalQuestions": res.get("totalQuestions", 0),
+                "percentage": res.get("percentage", 0),
+                "grade": res.get("grade", ""),
+                "passed": res.get("passed", False),
+                "published": True,
+                "submittedAt": submitted_at_str
+            })
+
+        merged_results.sort(
+            key=lambda x: x["submittedAt"] or "",
+            reverse=True
+        )
+
+        return success_response(message="Exam results fetched successfully.", data=serialize_doc(merged_results))

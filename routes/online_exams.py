@@ -167,3 +167,9 @@ def student_submit_exam(examId):
 def student_view_result(examId):
     student_user_id = get_jwt_identity()
     return OnlineExamService.view_result(student_user_id, examId)
+
+@online_exams_bp.route("/student/exam-results", methods=["GET"])
+@role_required("STUDENT")
+def student_get_exam_results():
+    student_user_id = get_jwt_identity()
+    return OnlineExamService.get_student_exam_results(student_user_id)

@@ -113,6 +113,11 @@ class OnlineExamRepository:
         return db.exam_results.find_one({"examId": exam_id, "studentId": student_id})
 
     @classmethod
+    def get_student_results(cls, student_id):
+        db = cls.get_db()
+        return list(db.exam_results.find({"studentId": student_id}))
+
+    @classmethod
     def save_result(cls, result_doc):
         db = cls.get_db()
         db.exam_results.update_one(
