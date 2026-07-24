@@ -540,6 +540,157 @@ class OnlineExamService:
         return OnlineExamService.publish_results(teacher_user_id, exam_id)
 
     @staticmethod
+    def get_teacher_marksheet(teacher_user_id, exam_id):
+        exam = OnlineExamRepository.get_exam_by_id(exam_id)
+        if not exam:
+            return error_response("Exam not found.", 404)
+
+        teacher = OnlineExamRepository.get_teacher_by_userId(teacher_user_id)
+        if not teacher:
+            return error_response("Teacher profile not found.", 404)
+
+        exam_classes = exam.get("classIds", [])
+        teacher_classes = teacher.get("assignedClasses", [])
+        overlap = set(exam_classes).intersection(set(teacher_classes))
+        if not overlap:
+            return error_response("Access denied. You do not teach any class assigned to this exam.", 403)
+
+        # Enrolled students count across assigned exam classes
+        enrolled_students = OnlineExamRepository.get_students_by_classIds(exam_classes)
+        total_students_count = len(enrolled_students)
+
+        # Get attempts for this exam
+        attempts = OnlineExamRepository.get_attempts_by_exam_id(exam_id)
+
+        # Build student lookup map for quick access
+        student_map = {s["studentId"]: s for s in enrolled_students}
+
+        # If no attempts exist, return 200 with empty list and summary
+        if not attempts:
+            summary = {
+                "totalStudents": total_students_count,
+                "attemptedStudents": 0,
+                "submittedStudents": 0,
+                "pendingStudents": total_students_count,
+                "passedStudents": 0,
+                "failedStudents": 0,
+                "highestScore": 0,
+                "averageScore": 0
+            }
+            return success_response(
+                message="No student attempts found.",
+                data={
+                    "summary": summary,
+                    "students": []
+                }
+            )
+
+        # Get all results for this exam
+        db = OnlineExamRepository.get_db()
+        results_list = list(db.exam_results.find({"examId": exam_id}))
+        results_map = {r["studentId"]: r for r in results_list}
+
+        # Map attempts by studentId
+        attempts_map = {a["studentId"]: a for a in attempts}
+
+        questions = OnlineExamRepository.get_questions_by_exam_id(exam_id)
+        questions_count = len(questions)
+
+        is_exam_published = bool(
+            exam.get("publishedResults") is True or exam.get("status") == "RESULT_PUBLISHED"
+        )
+
+        students_response = []
+        submitted_scores = []
+        passed_count = 0
+        failed_count = 0
+        submitted_count = 0
+
+        for student_id, attempt in attempts_map.items():
+            st_doc = student_map.get(student_id) or OnlineExamRepository.get_student_by_studentId(student_id)
+            student_name = "N/A"
+            roll_number = "N/A"
+            class_id = "N/A"
+            if st_doc:
+                student_name = st_doc.get("name") or st_doc.get("studentName") or "N/A"
+                roll_number = st_doc.get("rollNumber", "N/A")
+                class_id = st_doc.get("classId", "N/A")
+
+            res_doc = results_map.get(student_id)
+            attempt_status = attempt.get("status", "IN_PROGRESS")
+
+            if attempt_status == "SUBMITTED":
+                submitted_count += 1
+
+            submitted_at = res_doc.get("submittedAt") if res_doc else attempt.get("submittedAt")
+            if isinstance(submitted_at, datetime):
+                submitted_at_str = submitted_at.isoformat()
+            elif submitted_at:
+                submitted_at_str = str(submitted_at)
+            else:
+                submitted_at_str = None
+
+            total_q = res_doc.get("totalQuestions", questions_count) if res_doc else questions_count
+            correct_a = res_doc.get("correctAnswers", 0) if res_doc else 0
+            wrong_a = res_doc.get("wrongAnswers", 0) if res_doc else 0
+            score = res_doc.get("score", 0) if res_doc else 0
+            percentage = res_doc.get("percentage", 0.0) if res_doc else 0.0
+            grade = res_doc.get("grade", "N/A") if res_doc else "N/A"
+            passed = res_doc.get("passed", False) if res_doc else False
+
+            published = bool((res_doc and res_doc.get("published") is True) or is_exam_published)
+
+            if attempt_status == "SUBMITTED" or res_doc is not None:
+                submitted_scores.append(score)
+                if passed:
+                    passed_count += 1
+                else:
+                    failed_count += 1
+
+            students_response.append({
+                "studentId": student_id,
+                "studentName": student_name,
+                "rollNumber": roll_number,
+                "classId": class_id,
+                "attemptStatus": attempt_status,
+                "submittedAt": submitted_at_str,
+                "totalQuestions": total_q,
+                "correctAnswers": correct_a,
+                "wrongAnswers": wrong_a,
+                "score": score,
+                "percentage": percentage,
+                "grade": grade,
+                "passed": passed,
+                "published": published
+            })
+
+        attempted_count = len(attempts_map)
+        pending_count = max(0, total_students_count - attempted_count)
+
+        highest_score = max(submitted_scores) if submitted_scores else 0
+        average_score = round(sum(submitted_scores) / len(submitted_scores), 2) if submitted_scores else 0
+
+        summary = {
+            "totalStudents": total_students_count,
+            "attemptedStudents": attempted_count,
+            "submittedStudents": submitted_count,
+            "pendingStudents": pending_count,
+            "passedStudents": passed_count,
+            "failedStudents": failed_count,
+            "highestScore": highest_score,
+            "averageScore": average_score
+        }
+
+        return success_response(
+            message="Operation completed successfully.",
+            data={
+                "summary": summary,
+                "students": students_response
+            }
+        )
+
+
+    @staticmethod
     def get_exams_student(student_user_id, filters):
         student = OnlineExamRepository.get_student_by_userId(student_user_id)
         if not student:

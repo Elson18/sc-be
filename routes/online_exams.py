@@ -120,6 +120,13 @@ def teacher_publish_results(examId):
     teacher_user_id = get_jwt_identity()
     return OnlineExamService.publish_results_teacher(teacher_user_id, examId)
 
+@online_exams_bp.route("/teacher/exams/<examId>/marksheet", methods=["GET"])
+@role_required("TEACHER")
+def teacher_get_marksheet(examId):
+    teacher_user_id = get_jwt_identity()
+    return OnlineExamService.get_teacher_marksheet(teacher_user_id, examId)
+
+
 
 
 # ==========================================
